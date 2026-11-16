@@ -1,0 +1,20 @@
+{
+  "name": "SA Voice App",
+  "short_name": "SA Voice App",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#091713",
+  "theme_color": "#102c25",
+  "lang": "en",
+  "description": "Accessible on-device voice recording prototype.",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
