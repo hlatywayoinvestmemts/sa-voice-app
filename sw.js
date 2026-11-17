@@ -1,10 +1,18 @@
 'use strict';
 // Bump VERSION for EVERY release that changes the static shell.
-const VERSION = 'v1.1.0';
+const VERSION = 'v1.1.1';
 const CACHE = 'sa-voice-shell-' + VERSION;
 const SHELL = ['./', './index.html', './app.js', './manifest.webmanifest', './icon.svg'];
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)));
+  // Versioned requests avoid a stale CDN shell during a Pages rollout.
+  event.waitUntil(caches.open(CACHE).then(cache => Promise.all(SHELL.map(async path => {
+    const url = new URL(path, self.registration.scope);
+    const fresh = new URL(url);
+    fresh.searchParams.set('release', VERSION);
+    const response = await fetch(fresh, { cache: 'reload' });
+    if (!response.ok) throw new Error('Shell download failed');
+    await cache.put(url, response);
+  }))));
   // No skipWaiting: do not replace code during an active recording or text edit.
 });
 self.addEventListener('activate', event => {
