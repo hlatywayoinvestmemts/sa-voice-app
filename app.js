@@ -1,5 +1,5 @@
 'use strict';
-// This prototype stays on the device. There are no transcription network calls.
+// Audio is sent to Groq through our secure Worker.
 const recordButton = document.querySelector('#record');
 const language = document.querySelector('#language');
 const status = document.querySelector('#status');
@@ -115,18 +115,6 @@ async function startRecording() {
     else announce('The microphone could not start. Check that it is available and try again.');
   }
 }
-// TRANSCRIPTION STUB: this function intentionally makes no network requests.
-async function transcribe(audioBlob, languageCode) {
-  // TODO: send audioBlob and languageCode to our future Cloudflare Worker.
-  // TODO: the Worker will keep a Groq API key in its server-side secrets.
-  // TODO: the Worker will send the audio to Groq's Whisper API and return text.
-  // TODO: add consent, file-size limits, validation, rate limits and error handling.
-  // TODO: put returned text in the transcript without overwriting the user's edits.
-  // NEVER put an API key in this file, HTML, the manifest, or a public repository.
-  void audioBlob;
-  void languageCode;
-  announce('Recording ready to play or download. Transcription is not connected yet. You can type in the transcript box.');
-}
 const canRecord = window.isSecureContext && navigator.mediaDevices?.getUserMedia && typeof window.MediaRecorder !== 'undefined';
 if (!canRecord) {
   recordButton.disabled = true;
@@ -182,3 +170,18 @@ try {
 applyPreferences();
 textSize.addEventListener('change', () => applyPreferences(true));
 skin.addEventListener('change', () => applyPreferences(true));
+
+// Public API address, not a secret. All real keys stay in Cloudflare.
+const WORKER_URL="https://sa-voice-api.hlatywayoamogelang.workers.dev";
+async function requestAI(path,body){if(!navigator.onLine)throw Error('You are offline. Reconnect and try again.');const r=await fetch(WORKER_URL+path,{method:'POST',headers:body instanceof FormData?{}:{'Content-Type':'application/json'},body:body instanceof FormData?body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(r.status===429?'Free quota reached. Please try again later.':d.error||'Server error. Please try again later.');return d.text;}
+async function transcribe(blob,code){const field=document.querySelector('#transcript'),before=field.value;recordButton.disabled=true;announce('Transcribing… Audio is sent to Groq.');try{const f=new FormData();f.append('file',blob,download.download||'recording.webm');f.append('language',code);const text=await requestAI('/transcribe',f);field.value=field.value===before?text:field.value+'\n'+text;announce('Transcription ready. You can edit it.');}catch(e){announce(e.message||'Could not transcribe. Check your connection.');}finally{if(!busy)recordButton.disabled=false;}}
+const languages={"en":"english","zh":"chinese","de":"german","es":"spanish","ru":"russian","ko":"korean","fr":"french","ja":"japanese","pt":"portuguese","tr":"turkish","pl":"polish","ca":"catalan","nl":"dutch","ar":"arabic","sv":"swedish","it":"italian","id":"indonesian","hi":"hindi","fi":"finnish","vi":"vietnamese","he":"hebrew","uk":"ukrainian","el":"greek","ms":"malay","cs":"czech","ro":"romanian","da":"danish","hu":"hungarian","ta":"tamil","no":"norwegian","th":"thai","ur":"urdu","hr":"croatian","bg":"bulgarian","lt":"lithuanian","la":"latin","mi":"maori","ml":"malayalam","cy":"welsh","sk":"slovak","te":"telugu","fa":"persian","lv":"latvian","bn":"bengali","sr":"serbian","az":"azerbaijani","sl":"slovenian","kn":"kannada","et":"estonian","mk":"macedonian","br":"breton","eu":"basque","is":"icelandic","hy":"armenian","ne":"nepali","mn":"mongolian","bs":"bosnian","kk":"kazakh","sq":"albanian","sw":"swahili","gl":"galician","mr":"marathi","pa":"punjabi","si":"sinhala","km":"khmer","sn":"shona","yo":"yoruba","so":"somali","af":"afrikaans","oc":"occitan","ka":"georgian","be":"belarusian","tg":"tajik","sd":"sindhi","gu":"gujarati","am":"amharic","yi":"yiddish","lo":"lao","uz":"uzbek","fo":"faroese","ht":"haitian creole","ps":"pashto","tk":"turkmen","nn":"nynorsk","mt":"maltese","sa":"sanskrit","lb":"luxembourgish","my":"myanmar","bo":"tibetan","tl":"tagalog","mg":"malagasy","as":"assamese","tt":"tatar","haw":"hawaiian","ln":"lingala","ha":"hausa","ba":"bashkir","jw":"javanese","su":"sundanese","yue":"cantonese"};
+language.replaceChildren(...Object.entries(languages).sort((a,b)=>a[1].localeCompare(b[1])).map(([code,name])=>{const o=document.createElement('option');o.value=code;o.textContent=name[0].toUpperCase()+name.slice(1);return o;}));language.value='en';
+const panel=document.querySelector('aside');panel.innerHTML=`<h2>AI assistant</h2><p>Submitted audio, messages and photos go to Groq for processing through our secure server. We do not save this content. Do not submit private information. AI may be wrong.</p><section aria-labelledby="chat-title"><h3 id="chat-title">Chat</h3><div id="messages" role="log" aria-live="polite"></div><form id="chat-form"><label for="chat-input">Your message</label><textarea id="chat-input" maxlength="4000" required rows="3"></textarea><button id="send" type="submit">Send message</button></form><p id="chat-status" role="status" aria-live="polite"></p></section><section aria-labelledby="photo-title"><h3 id="photo-title">Describe a photo</h3><p>Descriptions may be wrong. Never rely on this for navigation, medicine or identifying people.</p><label for="camera">Take a picture</label><input type="file" id="camera" accept="image/*" capture="environment"><label for="gallery">Choose from gallery</label><input type="file" id="gallery" accept="image/*"><button type="button" id="describe">Describe a photo</button><p id="photo-status" role="status" aria-live="polite"></p><div id="description" role="region" aria-label="Photo description" tabindex="0" style="white-space:pre-wrap"></div></section><section><h3>Search the web</h3><p>Not connected: free access to Groq web search has not been confirmed. Chat does not browse the web.</p></section>`;
+const history=[],msg=document.querySelector('#chat-input'),send=document.querySelector('#send'),cs=document.querySelector('#chat-status');
+function addMessage(who,text){const p=document.createElement('p');p.style.whiteSpace='pre-wrap';p.textContent=who+': '+text;document.querySelector('#messages').append(p);}
+document.querySelector('#chat-form').addEventListener('submit',async e=>{e.preventDefault();const message=msg.value.trim();if(!message)return;send.disabled=true;cs.textContent='Assistant is typing…';addMessage('You',message);msg.value='';try{const text=await requestAI('/chat',{message,history});addMessage('Assistant',text);history.push({role:'user',content:message},{role:'assistant',content:text});if(history.length>8)history.splice(0,history.length-8);cs.textContent='Reply ready.';}catch(e){cs.textContent=e.message||'Could not send. Check your connection.';}finally{send.disabled=false;}});
+let photo=null;const ps=document.querySelector('#photo-status');for(const id of ['camera','gallery'])document.getElementById(id).addEventListener('change',e=>{photo=e.target.files[0]||null;ps.textContent=photo?'Photo selected. Press Describe a photo to send it.':'';});
+async function compressPhoto(file){if(file.size>25*1024*1024)throw Error('Choose a photo smaller than 25 MB.');const image=await createImageBitmap(file),scale=Math.min(1,1024/Math.max(image.width,image.height)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);image.close();const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.8));if(!blob)throw Error('Try a JPEG or PNG photo.');return blob;}
+document.querySelector('#describe').addEventListener('click',async e=>{if(!photo){ps.textContent='Take a picture or choose one first.';return;}e.target.disabled=true;ps.textContent='Describing…';try{const blob=await compressPhoto(photo),f=new FormData();f.append('file',blob,'photo.jpg');const text=await requestAI('/describe',f);document.querySelector('#description').textContent=text;ps.textContent='Description ready. Uploaded '+Math.ceil(blob.size/1024)+' KB. Mobile data charges may apply.';}catch(e){ps.textContent=e.message||'Could not describe this photo. Try JPEG or PNG.';}finally{e.target.disabled=false;}});
+announce('Ready. Stopping a recording sends the audio to Groq for transcription.');
