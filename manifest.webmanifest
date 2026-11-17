@@ -5,8 +5,8 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#091713",
-  "theme_color": "#102c25",
+  "background_color": "#030711",
+  "theme_color": "#030711",
   "lang": "en",
   "description": "Accessible on-device voice recording prototype.",
   "icons": [
