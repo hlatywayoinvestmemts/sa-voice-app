@@ -174,7 +174,40 @@ skin.addEventListener('change', () => applyPreferences(true));
 // Public API address, not a secret. All real keys stay in Cloudflare.
 const WORKER_URL="https://sa-voice-api.hlatywayoamogelang.workers.dev";
 async function requestAI(path,body){if(!navigator.onLine)throw Error('You are offline. Reconnect and try again.');const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),65000);try{const r=await fetch(WORKER_URL+path,{signal:controller.signal,method:'POST',headers:body instanceof FormData?{}:{'Content-Type':'application/json'},body:body instanceof FormData?body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(r.status===429?'Free quota reached. Please try again later.':d.error||'Server error. Please try again later.');if(typeof d.text!=='string'||!d.text.trim())throw Error('No result was returned. Please try again.');return d.text;}catch(e){if(e.name==='AbortError')throw Error('The request took too long. Please try again.');if(e instanceof TypeError)throw Error('Could not connect. Check your connection and try again.');throw e;}finally{clearTimeout(timer);}}
-async function transcribe(blob,code){const field=document.querySelector('#transcript'),before=field.value;recordButton.disabled=true;announce('Transcribing… Audio is sent to Groq.');try{const f=new FormData();f.append('file',blob,download.download||'recording.webm');f.append('language',code);const text=await requestAI('/transcribe',f);field.value=field.value===before?text:field.value+'\n'+text;announce('Transcription ready. You can edit it.');}catch(e){announce(e.message||'Could not transcribe. Check your connection.');}finally{if(!busy)recordButton.disabled=false;}}
+// Reject silence locally before any upload. This is a loudness check, not speech recognition.
+async function hasAudibleSpeech(blob) {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) throw Error('Audio checking is unavailable in this browser. Try a newer browser.');
+  const context = new AudioContextClass();
+  let timeout;
+  try {
+    const decoded = await Promise.race([
+      blob.arrayBuffer().then(data => context.decodeAudioData(data)),
+      new Promise((_, reject) => { timeout = setTimeout(() => reject(Error('Audio checking took too long. Try recording again.')), 8000); })
+    ]);
+    if (decoded.duration < 0.35) return false;
+    const windowSize = Math.max(1, Math.floor(decoded.sampleRate * 0.02));
+    let audibleSeconds = 0;
+    for (let start = 0; start < decoded.length; start += windowSize) {
+      let sum = 0, peak = 0, count = 0;
+      for (let channel = 0; channel < decoded.numberOfChannels; channel++) {
+        const samples = decoded.getChannelData(channel);
+        for (let i = start; i < Math.min(start + windowSize, samples.length); i++) {
+          const value = samples[i]; sum += value * value; peak = Math.max(peak, Math.abs(value)); count++;
+        }
+      }
+      if (count && Math.sqrt(sum / count) >= 0.004 && peak >= 0.015) audibleSeconds += Math.min(windowSize, decoded.length - start) / decoded.sampleRate;
+    }
+    return audibleSeconds >= 0.12;
+  } catch (error) {
+    if (error.message?.includes('took too long')) throw error;
+    throw Error('Could not check this recording. Try recording again in a supported browser.');
+  } finally {
+    clearTimeout(timeout);
+    await context.close().catch(() => {});
+  }
+}
+async function transcribe(blob,code){const field=document.querySelector('#transcript'),before=field.value;recordButton.disabled=true;announce('Checking recording…');try{if(!await hasAudibleSpeech(blob)){announce('No speech detected. Try recording again.');return;}announce('Transcribing… Audio is sent to Groq.');const f=new FormData();f.append('file',blob,download.download||'recording.webm');f.append('language',code);const text=await requestAI('/transcribe',f);field.value=field.value===before?text:field.value+'\n'+text;announce('Transcription ready. You can edit it.');}catch(e){announce(e.message||'Could not transcribe. Check your connection.');}finally{if(!busy)recordButton.disabled=false;}}
 const languages={"en":"english","zh":"chinese","de":"german","es":"spanish","ru":"russian","ko":"korean","fr":"french","ja":"japanese","pt":"portuguese","tr":"turkish","pl":"polish","ca":"catalan","nl":"dutch","ar":"arabic","sv":"swedish","it":"italian","id":"indonesian","hi":"hindi","fi":"finnish","vi":"vietnamese","he":"hebrew","uk":"ukrainian","el":"greek","ms":"malay","cs":"czech","ro":"romanian","da":"danish","hu":"hungarian","ta":"tamil","no":"norwegian","th":"thai","ur":"urdu","hr":"croatian","bg":"bulgarian","lt":"lithuanian","la":"latin","mi":"maori","ml":"malayalam","cy":"welsh","sk":"slovak","te":"telugu","fa":"persian","lv":"latvian","bn":"bengali","sr":"serbian","az":"azerbaijani","sl":"slovenian","kn":"kannada","et":"estonian","mk":"macedonian","br":"breton","eu":"basque","is":"icelandic","hy":"armenian","ne":"nepali","mn":"mongolian","bs":"bosnian","kk":"kazakh","sq":"albanian","sw":"swahili","gl":"galician","mr":"marathi","pa":"punjabi","si":"sinhala","km":"khmer","sn":"shona","yo":"yoruba","so":"somali","af":"afrikaans","oc":"occitan","ka":"georgian","be":"belarusian","tg":"tajik","sd":"sindhi","gu":"gujarati","am":"amharic","yi":"yiddish","lo":"lao","uz":"uzbek","fo":"faroese","ht":"haitian creole","ps":"pashto","tk":"turkmen","nn":"nynorsk","mt":"maltese","sa":"sanskrit","lb":"luxembourgish","my":"myanmar","bo":"tibetan","tl":"tagalog","mg":"malagasy","as":"assamese","tt":"tatar","haw":"hawaiian","ln":"lingala","ha":"hausa","ba":"bashkir","jw":"javanese","su":"sundanese","yue":"cantonese"};
 language.replaceChildren(...Object.entries(languages).sort((a,b)=>a[1].localeCompare(b[1])).map(([code,name])=>{const o=document.createElement('option');o.value=code;o.textContent=name[0].toUpperCase()+name.slice(1);return o;}));language.value='en';
 const panel=document.querySelector('aside');panel.innerHTML=`<h2>AI assistant</h2><p>Submitted audio, messages and photos go to Groq for processing through our secure server. We do not save this content. Do not submit private information. AI may be wrong.</p><section aria-labelledby="chat-title"><h3 id="chat-title">Chat</h3><div id="messages" role="log" aria-live="polite"></div><form id="chat-form"><label for="chat-input">Your message</label><textarea id="chat-input" maxlength="4000" required rows="3"></textarea><button id="send" type="submit">Send message</button></form><p id="chat-status" role="status" aria-live="polite"></p></section><section aria-labelledby="photo-title"><h3 id="photo-title">Describe a photo</h3><p>Descriptions may be wrong. Never rely on this for navigation, medicine or identifying people.</p><label for="camera">Take a picture</label><input type="file" id="camera" accept="image/*" capture="environment"><label for="gallery">Choose from gallery</label><input type="file" id="gallery" accept="image/*"><button type="button" id="describe">Describe a photo</button><p id="photo-status" role="status" aria-live="polite"></p><div id="description" role="region" aria-label="Photo description" tabindex="0" style="white-space:pre-wrap"></div></section><section><h3>Search the web</h3><p>Not connected: free access to Groq web search has not been confirmed. Chat does not browse the web.</p></section>`;
