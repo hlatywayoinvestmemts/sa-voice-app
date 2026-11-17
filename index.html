@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#030711"><meta name="description" content="An accessible, private voice recording prototype. English and Afrikaans.">
+<meta name="theme-color" content="#030711"><meta name="description" content="Accessible voice transcription, AI chat and photo descriptions.">
 <title>SA Voice App — Your voice, your space</title>
 <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg" type="image/svg+xml">
 <style>
@@ -19,7 +19,10 @@ body{min-height:100vh;background:var(--bg);font-size:1rem}
 .settings{margin-top:2rem}.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}.settings label{margin-top:0}header{flex-wrap:wrap}.skip{z-index:10}#download{display:inline-flex;align-items:center;min-height:56px;padding:.5rem;border:2px solid var(--gold);border-radius:12px}audio{min-height:56px}:focus-visible{outline:4px solid var(--text);outline-offset:5px}
 :root[data-skin="contrast"] .panel,:root[data-skin="contrast"] select,:root[data-skin="contrast"] textarea,:root[data-skin="contrast"] .bubble,:root[data-skin="contrast"] .placeholder{border:3px solid #fff;box-shadow:none}
 @media(max-width:760px){.settings-grid{grid-template-columns:1fr}h1{font-size:2.2rem}}
-input[type=file]{display:block;max-width:100%;font:inherit;color:var(--text);margin:1rem 0}#messages p,#description{overflow-wrap:anywhere}section section{margin-top:2rem}</style>
+input[type=file]{display:block;max-width:100%;font:inherit;color:var(--text);margin:1rem 0}#messages p,#description{overflow-wrap:anywhere}section section{margin-top:2rem}
+/* Keep form controls inside narrow phone grid columns. */
+.grid{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}.settings-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.panel,.grid>*,.settings-grid>*{min-width:0}select,textarea,input,button{max-width:100%;min-width:0}button{white-space:normal;overflow-wrap:anywhere}@media(max-width:760px){.grid,.settings-grid{grid-template-columns:minmax(0,1fr)}}
+</style>
 <script src="./app.js" defer></script>
 </head>
 <body>
