@@ -1,6 +1,6 @@
 'use strict';
 // Bump VERSION for EVERY release that changes the static shell.
-const VERSION = 'v1.0.0';
+const VERSION = 'v1.1.0';
 const CACHE = 'sa-voice-shell-' + VERSION;
 const SHELL = ['./', './index.html', './app.js', './manifest.webmanifest', './icon.svg'];
 self.addEventListener('install', event => {
