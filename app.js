@@ -59,9 +59,12 @@ async function startRecording() {
   language.disabled = true;
   announce('Waiting for microphone permission…');
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Request browser speech cleanup and 128 kbps encoding; device/browser support varies.
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     const mimeType = chooseMimeType();
-    recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+    const options = { audioBitsPerSecond: 128000 };
+    if (mimeType) options.mimeType = mimeType;
+    recorder = new MediaRecorder(stream, options);
     chunks = [];
     recordedLanguage = language.value;
     recorder.addEventListener('dataavailable', event => {
@@ -152,3 +155,30 @@ if ('serviceWorker' in navigator && window.isSecureContext) {
       .catch(() => { /* Recording still works if offline setup is unavailable. */ });
   });
 }
+
+
+// Local preferences are optional: recording still works if storage is blocked.
+const textSize = document.querySelector('#text-size');
+const skin = document.querySelector('#skin');
+const settingsStatus = document.querySelector('#settings-status');
+function applyPreferences(save = false) {
+  document.documentElement.dataset.textSize = textSize.value;
+  document.documentElement.dataset.skin = skin.value;
+  document.querySelector('meta[name="theme-color"]').content = {celestial:'#030711',emerald:'#102c25',contrast:'#000000'}[skin.value];
+  if (save) {
+    try {
+      localStorage.setItem('sa-voice-text-size', textSize.value);
+      localStorage.setItem('sa-voice-skin', skin.value);
+      settingsStatus.textContent = 'Settings saved in this browser.';
+    } catch { settingsStatus.textContent = 'Settings applied for this visit. Browser storage is unavailable.'; }
+  }
+}
+try {
+  const size = localStorage.getItem('sa-voice-text-size');
+  const theme = localStorage.getItem('sa-voice-skin');
+  if (['large', 'standard'].includes(size)) textSize.value = size;
+  if (['celestial', 'emerald', 'contrast'].includes(theme)) skin.value = theme;
+} catch { /* Use accessible defaults when storage is unavailable. */ }
+applyPreferences();
+textSize.addEventListener('change', () => applyPreferences(true));
+skin.addEventListener('change', () => applyPreferences(true));
