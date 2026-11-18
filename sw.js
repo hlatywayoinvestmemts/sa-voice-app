@@ -1,8 +1,8 @@
 'use strict';
 // Bump VERSION for EVERY release that changes the static shell.
-const VERSION = 'v1.3.3';
+const VERSION = 'v1.3.4';
 const CACHE = 'sa-voice-shell-' + VERSION;
-const SHELL = ['./', './index.html', './app.js', './manifest.webmanifest', './icon.svg'];
+const SHELL = ['./', './index.html', './app.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', event => {
   // Versioned requests avoid a stale CDN shell during a Pages rollout.
   event.waitUntil(caches.open(CACHE).then(cache => Promise.all(SHELL.map(async path => {
