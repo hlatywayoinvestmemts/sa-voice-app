@@ -62,6 +62,7 @@ async function startRecording() {
   try {
     // Request browser speech cleanup and 128 kbps encoding; device/browser support varies.
     stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    if (leavingPage || document.hidden) { stopTracks(); resetControls(); announce('Recording cancelled because the app is not visible.'); return; }
     const mimeType = chooseMimeType();
     const options = { audioBitsPerSecond: 128000 };
     if (mimeType) options.mimeType = mimeType;
@@ -220,7 +221,17 @@ const history=[],msg=document.querySelector('#chat-input'),send=document.querySe
 function addMessage(who,text){const p=document.createElement('p');p.style.whiteSpace='pre-wrap';p.textContent=who+': '+text;const log=document.querySelector('#messages');log.append(p);while(log.children.length>24)log.firstElementChild.remove();}
 document.querySelector('#chat-form').addEventListener('submit',async e=>{e.preventDefault();if(send.disabled)return;const message=msg.value.trim();if(!message)return;send.disabled=true;cs.textContent='Assistant is typing…';addMessage('You',message);msg.value='';try{if(await routeCommand(message))return;const text=await requestAI('/chat',{message,history});lastAnswer=text;addMessage('Assistant',text);history.push({role:'user',content:message},{role:'assistant',content:text});if(history.length>8)history.splice(0,history.length-8);cs.textContent='Reply ready.';}catch(e){cs.textContent=e.message||'Could not send. Check your connection.';}finally{send.disabled=false;}});
 let photo=null;const ps=document.querySelector('#photo-status');for(const id of ['camera','gallery'])document.getElementById(id).addEventListener('change',e=>{photo=e.target.files[0]||null;ps.textContent=photo?'Photo selected. Press Describe a photo to send it.':'';});
-async function compressPhoto(file){if(file.size>25*1024*1024)throw Error('Choose a photo smaller than 25 MB.');const image=await createImageBitmap(file),scale=Math.min(1,1024/Math.max(image.width,image.height)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);image.close();const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.8));if(!blob)throw Error('Try a JPEG or PNG photo.');return blob;}
+async function compressPhoto(file){
+if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Choose a JPEG, PNG or WebP photo.');
+if(file.size>5*1024*1024)throw Error('Choose a photo smaller than 5 MB to protect device memory.');
+let image,url;const canvas=document.createElement('canvas');
+try{if(typeof createImageBitmap==='function')image=await createImageBitmap(file,{resizeWidth:1024,resizeQuality:'low'});
+else{url=URL.createObjectURL(file);image=await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(Error('Could not open this photo. Try JPEG or PNG.'));img.src=url;});}
+const width=image.naturalWidth||image.width,height=image.naturalHeight||image.height;if(!width||!height||width*height>16777216)throw Error('Photo dimensions are too large. Choose a smaller photo.');
+const scale=Math.min(1,1024/Math.max(width,height));canvas.width=Math.max(1,Math.round(width*scale));canvas.height=Math.max(1,Math.round(height*scale));canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
+const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.8));if(!blob)throw Error('Try a JPEG or PNG photo.');return blob;
+}finally{image?.close?.();if(url)URL.revokeObjectURL(url);canvas.width=1;canvas.height=1;}}
+
 document.querySelector('#describe').addEventListener('click',async e=>{if(e.target.disabled)return;if(!photo){ps.textContent='Take a picture or choose one first.';return;}e.target.disabled=true;ps.textContent='Describing…';try{const blob=await compressPhoto(photo),f=new FormData();f.append('file',blob,'photo.jpg');const text=await requestAI('/describe',f);document.querySelector('#description').textContent=text;lastAnswer=text;ps.textContent='Description ready. Uploaded '+Math.ceil(blob.size/1024)+' KB. Mobile data charges may apply.';}catch(e){ps.textContent=e.message||'Could not describe this photo. Try JPEG or PNG.';}finally{e.target.disabled=false;}});
 announce('Ready. Stopping a recording sends the audio to Groq for transcription.');
 
