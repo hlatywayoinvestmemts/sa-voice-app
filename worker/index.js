@@ -1,4 +1,4 @@
-// SA Voice App: no content logging, databases or durable content storage.
+// SA Voice App: no content logging or durable user-content storage. D1 stores a numeric quota only.
 // Put GROQ_API_KEY in a Cloudflare encrypted Secret, never in this source.
 const ORIGIN = 'https://hlatywayoinvestmemts.github.io';
 const LANGUAGES = new Set(["en","zh","de","es","ru","ko","fr","ja","pt","tr","pl","ca","nl","ar","sv","it","id","hi","fi","vi","he","uk","el","ms","cs","ro","da","hu","ta","no","th","ur","hr","bg","lt","la","mi","ml","cy","sk","te","fa","lv","bn","sr","az","sl","kn","et","mk","br","eu","is","hy","ne","mn","bs","kk","sq","sw","gl","mr","pa","si","km","sn","yo","so","af","oc","ka","be","tg","sd","gu","am","yi","lo","uz","fo","ht","ps","tk","nn","mt","sa","lb","my","bo","tl","mg","as","tt","haw","ln","ha","ba","jw","su","yue"]);
@@ -45,7 +45,16 @@ export default { async fetch(request, env) {
   if (path === '/search') return reply({error:'Web search is not connected. No paid search service is used.'},501);
   const now = Math.floor(Date.now()/60000); if (now !== minute) {minute=now;calls=0;}
   if (++calls > 15) return reply({error:'Too many requests. Please wait a minute.'},429);
-  if (!env.GROQ_API_KEY) return reply({error:'The AI service is not configured yet.'},503);
+      // One atomic shared counter across isolates/locations; no IPs or content.
+    // Free D1 limits fail closed. A public shared quota can still be exhausted.
+    try {
+      if (!env.SA_VOICE_QUOTA) return reply({error:'Abuse protection is unavailable. Please try again later.'},503);
+      const allowed = await env.SA_VOICE_QUOTA.prepare(
+        'INSERT INTO quota(id,window,calls) VALUES(1,?1,1) ON CONFLICT(id) DO UPDATE SET window=excluded.window,calls=CASE WHEN quota.window=excluded.window THEN quota.calls+1 ELSE 1 END WHERE quota.window<>excluded.window OR quota.calls<15 RETURNING calls'
+      ).bind(now).first();
+      if (!allowed) return reply({error:'Shared free quota reached. Please wait a minute.'},429);
+    } catch { return reply({error:'Abuse protection is unavailable. Please try again later.'},503); }
+if (!env.GROQ_API_KEY) return reply({error:'The AI service is not configured yet.'},503);
   try {
     const blob = await limitedBody(request, path === '/transcribe' ? 10*1024*1024 : path === '/describe' ? 5*1024*1024 : 32768);
     let result;
