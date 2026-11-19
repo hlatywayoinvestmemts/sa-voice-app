@@ -28,12 +28,14 @@ input[type=url],input[type=text],input:not([type]){font:inherit;line-height:1.5;
 input[type=file],input[type=file]::file-selector-button{min-height:48px;font:inherit}
 section[aria-label="Search and video tools"] a{min-height:48px;padding:.35rem 0;overflow-wrap:anywhere}
 section[aria-label="Search and video tools"] button{margin:.35rem .25rem .35rem 0}
+@keyframes puisOStart{from{opacity:.35;transform:scale(.86)}to{opacity:1;transform:scale(1)}}
+@media(prefers-reduced-motion:no-preference){header .opening-icon{animation:puisOStart .7s ease-out both}}
 </style>
 <script src="./app.js" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to recorder</a>
-<header><img src="./icon.svg" alt="" width="52" height="52"><span class="brand">SA Voice App</span><span class="tag">Prototype</span></header>
+<header><img class="opening-icon" src="./icon-192.png" alt="" width="52" height="52"><span class="brand">SA Voice App</span><span class="tag">Prototype</span></header>
 <main id="main" tabindex="-1"><p class="tag">A little space to be heard</p><h1>Your voice.<br>Your words. Your pace.</h1><p class="intro">Record in a supported language, chat, or describe a photo. Submitted content goes to Groq for AI processing. AI can make mistakes.</p>
 <p class="note">After a successful first visit, the app screen can open offline. AI replies, transcription, photo descriptions, search and videos require an internet connection. This is a web prototype, not a store-certified app.</p>
 <section class="panel settings" aria-labelledby="settings-title"><h2 id="settings-title">Settings</h2><p class="note" id="settings-help">Choose your text size and skin. Preferences stay in this browser when storage is available.</p><div class="settings-grid"><div><label for="text-size">Text size</label><select id="text-size" aria-describedby="settings-help"><option value="large">Large (default)</option><option value="standard">Standard</option></select></div><div><label for="skin">Skin</label><select id="skin" aria-describedby="settings-help"><option value="celestial">Celestial (default)</option><option value="emerald">Emerald</option><option value="contrast">High contrast</option></select></div></div><p id="settings-status" class="note" role="status" aria-live="polite"></p></section>
