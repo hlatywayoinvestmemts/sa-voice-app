@@ -21,6 +21,25 @@ let recordedLanguage = 'en';
 // The completed Blob is held only in memory until another recording or page exit.
 let recordedAudio = null;
 function announce(message) { status.textContent = message; }
+
+// Only this preference is stored, never audio or messages.
+const cleanup = document.createElement('button');
+cleanup.type = 'button'; cleanup.id = 'noise-reduction';
+cleanup.textContent = 'Reduce background noise';
+cleanup.setAttribute('aria-pressed', 'true');
+cleanup.setAttribute('aria-describedby', 'noise-help');
+cleanup.style.minHeight = '48px'; cleanup.style.width = '100%';
+const noiseHelp = document.createElement('p'); noiseHelp.id = 'noise-help';
+noiseHelp.textContent = 'On by default. Applies to the next recording. Uses browser noise suppression, echo cancellation and automatic gain control. Reduces background noise; cannot remove all noise or provide studio-grade cancellation. Support varies by phone and browser.';
+recordButton.before(cleanup, noiseHelp);
+try { cleanup.setAttribute('aria-pressed', localStorage.getItem('sa-voice-noise') !== 'off' ? 'true' : 'false'); } catch {}
+cleanup.addEventListener('click', () => {
+  const enabled = cleanup.getAttribute('aria-pressed') !== 'true';
+  cleanup.setAttribute('aria-pressed', String(enabled));
+  try { localStorage.setItem('sa-voice-noise', enabled ? 'on' : 'off'); } catch {}
+  announce('Background noise reduction ' + (enabled ? 'on' : 'off') + '. Applies to the next recording.');
+});
+
 function stopTracks() {
   if (stream) stream.getTracks().forEach(track => track.stop());
   stream = null;
@@ -61,7 +80,7 @@ async function startRecording() {
   announce('Waiting for microphone permission…');
   try {
     // Request browser speech cleanup and 128 kbps encoding; device/browser support varies.
-    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: cleanup.getAttribute('aria-pressed') === 'true', noiseSuppression: cleanup.getAttribute('aria-pressed') === 'true', autoGainControl: cleanup.getAttribute('aria-pressed') === 'true' } });
     if (leavingPage || document.hidden) { stopTracks(); resetControls(); announce('Recording cancelled because the app is not visible.'); return; }
     const mimeType = chooseMimeType();
     const options = { audioBitsPerSecond: 128000 };
@@ -179,7 +198,7 @@ skin.addEventListener('change', () => applyPreferences(true));
 
 // Public API address, not a secret. All real keys stay in Cloudflare.
 const WORKER_URL="https://sa-voice-api.hlatywayoamogelang.workers.dev";
-async function requestAI(path,body){if(!navigator.onLine)throw Error('You are offline. Reconnect and try again.');const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),65000);try{const r=await fetch(WORKER_URL+path,{signal:controller.signal,method:'POST',headers:body instanceof FormData?{}:{'Content-Type':'application/json'},body:body instanceof FormData?body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(r.status===429?'Free quota reached. Please try again later.':d.error||'Server error. Please try again later.');if(typeof d.text!=='string'||!d.text.trim())throw Error('No result was returned. Please try again.');return d.text;}catch(e){if(e.name==='AbortError')throw Error('The request took too long. Please try again.');if(e instanceof TypeError)throw Error('Could not connect. Check your connection and try again.');throw e;}finally{clearTimeout(timer);}}
+async function requestAI(path,body){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),65000);try{const r=await fetch(WORKER_URL+path,{signal:controller.signal,method:'POST',cache:'no-store',credentials:'omit',headers:body instanceof FormData?{}:{'Content-Type':'application/json'},body:body instanceof FormData?body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(r.status===429?'Free quota reached. Please try again later.':d.error||'Server error. Please try again later.');if(typeof d.text!=='string'||!d.text.trim())throw Error('No result was returned. Please try again.');return d.text;}catch(e){if(e.name==='AbortError')throw Error('The request took too long. Please try again.');if(e instanceof TypeError)throw Error('Could not connect. Check your connection and try again.');throw e;}finally{clearTimeout(timer);}}
 // Reject silence locally before any upload. This is a loudness check, not speech recognition.
 async function hasAudibleSpeech(blob) {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -217,9 +236,14 @@ async function transcribe(blob,code){const field=document.querySelector('#transc
 const languages={"en":"english","zh":"chinese","de":"german","es":"spanish","ru":"russian","ko":"korean","fr":"french","ja":"japanese","pt":"portuguese","tr":"turkish","pl":"polish","ca":"catalan","nl":"dutch","ar":"arabic","sv":"swedish","it":"italian","id":"indonesian","hi":"hindi","fi":"finnish","vi":"vietnamese","he":"hebrew","uk":"ukrainian","el":"greek","ms":"malay","cs":"czech","ro":"romanian","da":"danish","hu":"hungarian","ta":"tamil","no":"norwegian","th":"thai","ur":"urdu","hr":"croatian","bg":"bulgarian","lt":"lithuanian","la":"latin","mi":"maori","ml":"malayalam","cy":"welsh","sk":"slovak","te":"telugu","fa":"persian","lv":"latvian","bn":"bengali","sr":"serbian","az":"azerbaijani","sl":"slovenian","kn":"kannada","et":"estonian","mk":"macedonian","br":"breton","eu":"basque","is":"icelandic","hy":"armenian","ne":"nepali","mn":"mongolian","bs":"bosnian","kk":"kazakh","sq":"albanian","sw":"swahili","gl":"galician","mr":"marathi","pa":"punjabi","si":"sinhala","km":"khmer","sn":"shona","yo":"yoruba","so":"somali","af":"afrikaans","oc":"occitan","ka":"georgian","be":"belarusian","tg":"tajik","sd":"sindhi","gu":"gujarati","am":"amharic","yi":"yiddish","lo":"lao","uz":"uzbek","fo":"faroese","ht":"haitian creole","ps":"pashto","tk":"turkmen","nn":"nynorsk","mt":"maltese","sa":"sanskrit","lb":"luxembourgish","my":"myanmar","bo":"tibetan","tl":"tagalog","mg":"malagasy","as":"assamese","tt":"tatar","haw":"hawaiian","ln":"lingala","ha":"hausa","ba":"bashkir","jw":"javanese","su":"sundanese","yue":"cantonese"};
 language.replaceChildren(...Object.entries(languages).sort((a,b)=>a[1].localeCompare(b[1])).map(([code,name])=>{const o=document.createElement('option');o.value=code;o.textContent=name[0].toUpperCase()+name.slice(1);return o;}));language.value='en';
 const panel=document.querySelector('aside');panel.innerHTML=`<h2>AI assistant</h2><p>Submitted audio, messages and photos go to Groq for processing through our secure server. We do not save this content. Do not submit private information. AI may be wrong.</p><section aria-labelledby="chat-title"><h3 id="chat-title">Chat</h3><div id="messages" role="log" aria-live="polite"></div><form id="chat-form"><label for="chat-input">Your message</label><textarea id="chat-input" maxlength="4000" required rows="3"></textarea><button id="send" type="submit">Send message</button></form><p id="chat-status" role="status" aria-live="polite"></p></section><section aria-labelledby="photo-title"><h3 id="photo-title">Describe a photo</h3><p>Image descriptions may invent details, text or patterns. Never rely on them for identification, navigation, medicine or any safety decision.</p><label for="camera">Take a picture</label><input type="file" id="camera" accept="image/*" capture="environment"><label for="gallery">Choose from gallery</label><input type="file" id="gallery" accept="image/*"><button type="button" id="describe">Describe a photo</button><p id="photo-status" role="status" aria-live="polite"></p><div id="description" role="region" aria-label="Photo description" tabindex="0" style="white-space:pre-wrap"></div></section><section><h3>Search the web</h3><p>Type search for followed by a topic in chat for a Wikipedia summary and links to DuckDuckGo, Bing, Google and Yahoo. Ordinary AI chat does not browse the web.</p></section>`;
+function chatPayload(message, history) {
+  const recent = history.map(m => ({role:m.role, content:m.content.slice(0,4000)}));
+  while (recent.length && new TextEncoder().encode(JSON.stringify({message,history:recent})).length > 28000) recent.splice(0,2);
+  return {message,history:recent};
+}
 const history=[],msg=document.querySelector('#chat-input'),send=document.querySelector('#send'),cs=document.querySelector('#chat-status');
 function addMessage(who,text){const p=document.createElement('p');p.style.whiteSpace='pre-wrap';p.textContent=who+': '+text;const log=document.querySelector('#messages');log.append(p);while(log.children.length>24)log.firstElementChild.remove();}
-document.querySelector('#chat-form').addEventListener('submit',async e=>{e.preventDefault();if(send.disabled)return;const message=msg.value.trim();if(!message)return;send.disabled=true;cs.textContent='Assistant is typing…';addMessage('You',message);msg.value='';try{if(await routeCommand(message))return;const text=await requestAI('/chat',{message,history});lastAnswer=text;addMessage('Assistant',text);history.push({role:'user',content:message},{role:'assistant',content:text});if(history.length>8)history.splice(0,history.length-8);cs.textContent='Reply ready.';}catch(e){cs.textContent=e.message||'Could not send. Check your connection.';}finally{send.disabled=false;}});
+document.querySelector('#chat-form').addEventListener('submit',async e=>{e.preventDefault();if(send.disabled)return;const message=msg.value.trim();if(!message)return;send.disabled=true;cs.textContent='Sending your message…';const slow=setTimeout(()=>{cs.textContent='Still waiting for the AI service. Slow mobile connections can take longer.';},8000);addMessage('You',message);msg.value='';try{if(await routeCommand(message))return;const text=await requestAI('/chat',chatPayload(message,history));lastAnswer=text;addMessage('Assistant',text);history.push({role:'user',content:message},{role:'assistant',content:text});if(history.length>8)history.splice(0,history.length-8);cs.textContent='Reply ready.';}catch(e){cs.textContent=e.message||'Could not send. Check your connection.';if(!msg.value)msg.value=message;}finally{clearTimeout(slow);send.disabled=false;}});
 let photo=null;const ps=document.querySelector('#photo-status');for(const id of ['camera','gallery'])document.getElementById(id).addEventListener('change',e=>{photo=e.target.files[0]||null;ps.textContent=photo?'Photo selected. Press Describe a photo to send it.':'';});
 async function compressPhoto(file){
 if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Choose a JPEG, PNG or WebP photo.');
@@ -278,3 +302,13 @@ el('h3','Cosmetic Plus — proposed R29 per month',settings);el('p','Future ligh
 el('h3','Optional skins',settings);el('p','Proposed CSS skin: R19 once. Proposed personalised selfie skin: R39 once, with the photo kept on the device only. Future designs, not delivered products. No selfie is collected by this preview. Free accessible high-contrast choices must remain available. Preview before purchase.',settings);
 button('Buy CSS skin — not available',()=>{},settings).disabled=true;button('Buy selfie skin — not available',()=>{},settings).disabled=true;
 el('p','Suggested gateway: Paystack hosted card checkout, subject to merchant verification. Payments stay disabled until the owner has a verified business account, approved terms and cancellation/refund rules, and secure server-side verified payments and entitlements. This preview never asks for a card.',settings);
+
+// Show the installed shell and a safe, non-disruptive update notice.
+const release = document.createElement('p'); release.setAttribute('role','status'); release.setAttribute('aria-live','polite');
+release.textContent = 'App version 1.3.6. Chat is connected when online. If an old screen says AI chat is not connected, close all Puiso app and browser tabs, then reopen while online.';
+document.querySelector('footer').append(release);
+if ('serviceWorker' in navigator) navigator.serviceWorker.ready.then(reg => {
+  const ready = () => { release.textContent = 'Update downloaded. Finish recording or editing, then close all Puiso app and browser tabs and reopen to update. Nothing is saved automatically.'; };
+  if (reg.waiting) ready();
+  reg.addEventListener('updatefound', () => { const installing=reg.installing; installing?.addEventListener('statechange', () => { if(installing.state==='installed' && navigator.serviceWorker.controller) ready(); }); });
+}).catch(()=>{});
