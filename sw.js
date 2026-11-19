@@ -1,6 +1,6 @@
 'use strict';
 // Bump VERSION for EVERY release that changes the static shell.
-const VERSION = 'v1.3.5';
+const VERSION = 'v1.3.6';
 const CACHE = 'sa-voice-shell-' + VERSION;
 const SHELL = ['./', './index.html', './app.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', event => {
@@ -29,6 +29,18 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin || !allowed.includes(url.href)) return;
   event.respondWith(caches.open(CACHE).then(async cache => {
     const cached = await cache.match(event.request);
+    // Revalidate HTML and code on launch, with a bounded offline fallback.
+    // Never cache API requests or user content; do not force a running tab to reload.
+    if (event.request.mode === 'navigate' || url.pathname.endsWith('/app.js')) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3000);
+      try {
+        const fresh = await fetch(event.request, {cache:'no-cache', signal:controller.signal});
+        if (fresh.ok) { await cache.put(event.request, fresh.clone()); return fresh; }
+        if (!cached) return fresh;
+      } catch (error) { if (!cached) throw error; }
+      finally { clearTimeout(timer); }
+    }
     return cached || fetch(event.request);
   }));
 });
