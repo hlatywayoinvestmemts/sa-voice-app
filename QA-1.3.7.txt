@@ -1,0 +1,43 @@
+Puiso fixes-1.3.7 draft QA status — 20 November 2026
+
+NOT READY TO MERGE OR DEPLOY.
+Main and GitHub Pages source must remain unchanged pending full QA and owner approval.
+
+Implemented draft frontend changes:
+Puiso title/header/footer/manifest branding; prototype retained.
+Coverage notice names unavailable SA languages; no unverified pilot options added.
+Copy transcript and UTF-8 text download with live status and failure messages.
+Conservative beforeunload warning; mobile browsers may suppress it.
+Transcription appends rather than replacing existing text.
+Read-aloud language override and optional browser language detection; recording-language fallback, installed voice matching and default-voice warning.
+
+Observed live tests:
+Neutral chat returned: Two plus two equals four.
+Recording returned: No microphone was found.
+Empty photo and invalid YouTube inputs produced clear errors.
+Neutral sample photo uploaded and selected; processing not verified.
+Valid Big Buck Bunny YouTube link loaded the named player and fallback; playback not verified.
+New transcript copy/download controls were absent from live version.
+
+Partial local preview only:
+Static new HTML checked at approximately 390px: no horizontal overflow measured.
+This is not a branch deployment or full functional QA.
+
+Required before release:
+Real English and Afrikaans short speech, silence, quiet speech, noise and recording failure cases.
+Speech/noise discrimination is NOT fixed: existing loudness heuristic remains. Do not call it speech recognition.
+Full new copy/download success/failure, UTF-8 contents, keyboard and TalkBack announcements.
+Read-aloud locale and fallback, stop/cancel races and missing voices.
+Photo processing and failures, chat regressions, search, YouTube playback and error cases.
+Unsaved-work warnings for all flows and mobile limitations.
+Full branch preview and regression suite; service-worker/version release update still required.
+
+404 investigation:
+Listed JS, HTML and icons responded. Project favicon.ico returned 404 but was not established as the earlier unidentified GET failure. No broken linked asset confirmed.
+
+API and pilots:
+Signed-in sa-voice-api repository URL still returned 404; absent from the account repository list. Deleted versus renamed is unresolved.
+Backend unchanged. Azure pilot blocked by required card verification; no card supplied.
+Deepgram advertises no-card introductory credit, not unlimited free use. No account created.
+Separate backend authorisation and secure provider keys, routing, audio adaptation, response/error handling and hard no-charge limits are needed before any pilot.
+No new language until its complete transcription path is verified.
