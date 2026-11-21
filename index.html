@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#030711"><meta name="description" content="Accessible voice transcription, AI chat and photo descriptions.">
-<title>SA Voice App — Your voice, your space</title>
+<title>Puiso — Your voice, your space</title>
 <link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png">
 <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg" type="image/svg+xml">
 <style>
@@ -35,15 +35,15 @@ section[aria-label="Search and video tools"] button{margin:.35rem .25rem .35rem 
 </head>
 <body>
 <a class="skip" href="#main">Skip to recorder</a>
-<header><img class="opening-icon" src="./icon-192.png" alt="" width="52" height="52"><span class="brand">SA Voice App</span><span class="tag">Prototype</span></header>
+<header><img class="opening-icon" src="./icon-192.png" alt="" width="52" height="52"><span class="brand">Puiso</span><span class="tag">Prototype</span></header>
 <main id="main" tabindex="-1"><p class="tag">A little space to be heard</p><h1>Your voice.<br>Your words. Your pace.</h1><p class="intro">Record in a supported language, chat, or describe a photo. Submitted content goes to Groq for AI processing. AI can make mistakes.</p>
 <p class="note">After a successful first visit, the app screen can open offline. AI replies, transcription, photo descriptions, search and videos require an internet connection. This is a web prototype, not a store-certified app.</p>
 <section class="panel settings" aria-labelledby="settings-title"><h2 id="settings-title">Settings</h2><p class="note" id="settings-help">Choose your text size and skin. Preferences stay in this browser when storage is available.</p><div class="settings-grid"><div><label for="text-size">Text size</label><select id="text-size" aria-describedby="settings-help"><option value="large">Large (default)</option><option value="standard">Standard</option></select></div><div><label for="skin">Skin</label><select id="skin" aria-describedby="settings-help"><option value="celestial">Celestial (default)</option><option value="emerald">Emerald</option><option value="contrast">High contrast</option></select></div></div><p id="settings-status" class="note" role="status" aria-live="polite"></p></section>
-<div class="grid"><section class="panel" aria-labelledby="recorder-title"><h2 id="recorder-title">Start with your voice</h2><label for="language">Recording language</label><select id="language"><option value="en">English</option><option value="af">Afrikaans</option></select>
+<div class="grid"><section class="panel" aria-labelledby="recorder-title"><h2 id="recorder-title">Start with your voice</h2><label for="language">Recording language</label><select id="language" aria-describedby="language-help"><option value="en">English</option><option value="af">Afrikaans</option></select><p id="language-help" class="note">The selector lists transcription options offered through the current Groq integration, not a guarantee of accuracy. English and Afrikaans are offered; accuracy has not been certified on this device. isiZulu, isiXhosa, Sesotho, Setswana, Sepedi, siSwati, Tshivenda, Xitsonga and isiNdebele are not available in this version. Provider pilots are not connected.</p>
 <button id="record" type="button" aria-pressed="false" aria-describedby="record-help">Record</button><p id="record-help" class="note">Allow microphone access when asked. Press Stop when finished. Maximum 60 seconds. Stopping sends your audio to Groq for transcription.</p>
 <div class="timer" aria-label="Recording duration"><span id="duration">00:00</span><span class="note"> / 01:00</span></div><p id="status" class="status" role="status" aria-live="polite" aria-atomic="true">Ready. Audio is uploaded to Groq when recording stops.</p>
 <div id="playback" hidden><label for="audio">Listen to your recording</label><audio id="audio" controls preload="metadata"></audio><a id="download">Download recording</a></div>
-<label for="transcript">Your transcript</label><textarea id="transcript" placeholder="Your transcription appears here. You can also type and edit." aria-describedby="transcript-help"></textarea><p id="transcript-help" class="note">Editable by keyboard. Text and audio are not saved between sessions. Download audio before leaving.</p></section>
+<label for="transcript">Your transcript</label><textarea id="transcript" placeholder="Your transcription appears here. You can also type and edit." aria-describedby="transcript-help"></textarea><p id="transcript-help" class="note">Editable by keyboard. Text and audio are not saved between sessions. Download text and audio before leaving. Browser exit warnings may not appear on mobile.</p><button type="button" id="copy-transcript">Copy transcript</button><button type="button" id="download-text">Download text</button><p id="export-status" role="status" aria-live="polite" aria-atomic="true"></p></section>
 <aside class="panel" aria-labelledby="chat-title"><h2 id="chat-title">AI assistant</h2><p>Loading chat and photo controls. JavaScript and an internet connection are required. Submitted content goes to Groq for processing.</p></aside></div></main>
-<footer>SA Voice App · Phase 1 · A neutral working title</footer>
+<footer>Puiso · Web prototype</footer>
 </body></html>

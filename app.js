@@ -232,7 +232,7 @@ async function hasAudibleSpeech(blob) {
     await context.close().catch(() => {});
   }
 }
-async function transcribe(blob,code){const field=document.querySelector('#transcript'),before=field.value;recordButton.disabled=true;announce('Checking recording…');try{if(!await hasAudibleSpeech(blob)){announce('No speech detected. Try recording again.');return;}announce('Transcribing… Audio is sent to Groq.');const f=new FormData();f.append('file',blob,download.download||'recording.webm');f.append('language',code);const text=await requestAI('/transcribe',f);field.value=field.value===before?text:field.value+'\n'+text;announce('Transcription ready. You can edit it.');}catch(e){announce(e.message||'Could not transcribe. Check your connection.');}finally{if(!busy)recordButton.disabled=false;}}
+async function transcribe(blob,code){const field=document.querySelector('#transcript'),before=field.value;recordButton.disabled=true;announce('Checking recording…');try{if(!await hasAudibleSpeech(blob)){announce('No speech detected. Try recording again.');return;}announce('Transcribing… Audio is sent to Groq.');const f=new FormData();f.append('file',blob,download.download||'recording.webm');f.append('language',code);const text=await requestAI('/transcribe',f);field.value=field.value.trim()?field.value+'\n'+text:text;announce('Transcription ready. You can edit it.');}catch(e){announce(e.message||'Could not transcribe. Check your connection.');}finally{if(!busy)recordButton.disabled=false;}}
 const languages={"en":"english","zh":"chinese","de":"german","es":"spanish","ru":"russian","ko":"korean","fr":"french","ja":"japanese","pt":"portuguese","tr":"turkish","pl":"polish","ca":"catalan","nl":"dutch","ar":"arabic","sv":"swedish","it":"italian","id":"indonesian","hi":"hindi","fi":"finnish","vi":"vietnamese","he":"hebrew","uk":"ukrainian","el":"greek","ms":"malay","cs":"czech","ro":"romanian","da":"danish","hu":"hungarian","ta":"tamil","no":"norwegian","th":"thai","ur":"urdu","hr":"croatian","bg":"bulgarian","lt":"lithuanian","la":"latin","mi":"maori","ml":"malayalam","cy":"welsh","sk":"slovak","te":"telugu","fa":"persian","lv":"latvian","bn":"bengali","sr":"serbian","az":"azerbaijani","sl":"slovenian","kn":"kannada","et":"estonian","mk":"macedonian","br":"breton","eu":"basque","is":"icelandic","hy":"armenian","ne":"nepali","mn":"mongolian","bs":"bosnian","kk":"kazakh","sq":"albanian","sw":"swahili","gl":"galician","mr":"marathi","pa":"punjabi","si":"sinhala","km":"khmer","sn":"shona","yo":"yoruba","so":"somali","af":"afrikaans","oc":"occitan","ka":"georgian","be":"belarusian","tg":"tajik","sd":"sindhi","gu":"gujarati","am":"amharic","yi":"yiddish","lo":"lao","uz":"uzbek","fo":"faroese","ht":"haitian creole","ps":"pashto","tk":"turkmen","nn":"nynorsk","mt":"maltese","sa":"sanskrit","lb":"luxembourgish","my":"myanmar","bo":"tibetan","tl":"tagalog","mg":"malagasy","as":"assamese","tt":"tatar","haw":"hawaiian","ln":"lingala","ha":"hausa","ba":"bashkir","jw":"javanese","su":"sundanese","yue":"cantonese"};
 language.replaceChildren(...Object.entries(languages).sort((a,b)=>a[1].localeCompare(b[1])).map(([code,name])=>{const o=document.createElement('option');o.value=code;o.textContent=name[0].toUpperCase()+name.slice(1);return o;}));language.value='en';
 const panel=document.querySelector('aside');panel.innerHTML=`<h2>AI assistant</h2><p>Submitted audio, messages and photos go to Groq for processing through our secure server. We do not save this content. Do not submit private information. AI may be wrong.</p><section aria-labelledby="chat-title"><h3 id="chat-title">Chat</h3><div id="messages" role="log" aria-live="polite"></div><form id="chat-form"><label for="chat-input">Your message</label><textarea id="chat-input" maxlength="4000" required rows="3"></textarea><button id="send" type="submit">Send message</button></form><p id="chat-status" role="status" aria-live="polite"></p></section><section aria-labelledby="photo-title"><h3 id="photo-title">Describe a photo</h3><p>Image descriptions may invent details, text or patterns. Never rely on them for identification, navigation, medicine or any safety decision.</p><label for="camera">Take a picture</label><input type="file" id="camera" accept="image/*" capture="environment"><label for="gallery">Choose from gallery</label><input type="file" id="gallery" accept="image/*"><button type="button" id="describe">Describe a photo</button><p id="photo-status" role="status" aria-live="polite"></p><div id="description" role="region" aria-label="Photo description" tabindex="0" style="white-space:pre-wrap"></div></section><section><h3>Search the web</h3><p>Type search for followed by a topic in chat for a Wikipedia summary and links to DuckDuckGo, Bing, Google and Yahoo. Ordinary AI chat does not browse the web.</p></section>`;
@@ -267,7 +267,20 @@ function button(text,fn,parent=tools){const b=el('button',text,parent);b.type='b
 function link(text,url,parent=tools){const a=el('a',text,parent);a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.style.display='block';return a;}
 el('h2','Search, listen and watch');el('p','Type search for a topic, play gospel music, or play a video about farming in chat. Search uses Wikipedia. Video discovery opens YouTube; paste a video link here to play it.');
 const results=el('div');results.setAttribute('aria-live','polite');
-button('Read latest answer aloud',()=>{if(!window.speechSynthesis){cs.textContent='Speech output is unavailable in this browser.';return;}speechSynthesis.cancel();if(lastAnswer){const u=new SpeechSynthesisUtterance(lastAnswer);u.lang='en-ZA';speechSynthesis.speak(u);}else cs.textContent='Search or ask a question first.';});
+
+const outputLabel=el('label','Read-aloud language');outputLabel.htmlFor='output-language';
+const outputLanguage=el('select');outputLanguage.id='output-language';
+for(const [code,name] of [['auto','Automatic when available; otherwise recording language'],...Object.entries(languages)]){const o=document.createElement('option');o.value=code;o.textContent=name;outputLanguage.append(o);}
+const outputHelp=el('p','If pronunciation is wrong, choose the answer language here. Automatic detection and installed voices vary by browser.');outputHelp.id='output-language-help';outputLanguage.setAttribute('aria-describedby',outputHelp.id);
+async function answerLocale(text){
+ let code=outputLanguage.value;
+ if(code==='auto'){
+  code=language.value;
+  if(window.LanguageDetector){let detector;try{if(await LanguageDetector.availability()==='available'){detector=await LanguageDetector.create();const results=await detector.detect(text);if(results[0]?.confidence>=0.8)code=results[0].detectedLanguage;}}catch{}finally{detector?.destroy();}}
+ }
+ return ({en:'en-ZA',af:'af-ZA'})[code]||code;
+}
+button('Read latest answer aloud',async()=>{if(!window.speechSynthesis){cs.textContent='Speech output is unavailable in this browser.';return;}speechSynthesis.cancel();if(lastAnswer){const u=new SpeechSynthesisUtterance(lastAnswer);u.lang=await answerLocale(lastAnswer);const voices=speechSynthesis.getVoices();const voice=voices.find(v=>v.lang.toLowerCase()===u.lang.toLowerCase())||voices.find(v=>v.lang.split('-')[0]===u.lang.split('-')[0]);if(voice)u.voice=voice;else cs.textContent='No matching voice is installed. Using the browser default; pronunciation may be incorrect.';speechSynthesis.speak(u);}else cs.textContent='Search or ask a question first.';});
 button('Stop reading',()=>window.speechSynthesis?.cancel());
 button('Use transcript in chat',()=>{msg.value=document.querySelector('#transcript').value;msg.focus();});
 let searchBusy=false;
@@ -305,10 +318,32 @@ el('p','Suggested gateway: Paystack hosted card checkout, subject to merchant ve
 
 // Show the installed shell and a safe, non-disruptive update notice.
 const release = document.createElement('p'); release.setAttribute('role','status'); release.setAttribute('aria-live','polite');
-release.textContent = 'App version 1.3.6. Chat is connected when online. If an old screen says AI chat is not connected, close all Puiso app and browser tabs, then reopen while online.';
+release.textContent = 'App version 1.3.7. Chat is connected when online. If an old screen says AI chat is not connected, close all Puiso app and browser tabs, then reopen while online.';
 document.querySelector('footer').append(release);
 if ('serviceWorker' in navigator) navigator.serviceWorker.ready.then(reg => {
   const ready = () => { release.textContent = 'Update downloaded. Finish recording or editing, then close all Puiso app and browser tabs and reopen to update. Nothing is saved automatically.'; };
   if (reg.waiting) ready();
   reg.addEventListener('updatefound', () => { const installing=reg.installing; installing?.addEventListener('statechange', () => { if(installing.state==='installed' && navigator.serviceWorker.controller) ready(); }); });
 }).catch(()=>{});
+
+// Exports and honest language fallback: no content is persisted.
+const transcriptField=document.querySelector('#transcript');
+const exportStatus=document.querySelector('#export-status');
+
+document.querySelector('#copy-transcript').addEventListener('click',async()=>{
+ const text=transcriptField.value;
+ if(!text.trim()){exportStatus.textContent='No transcript to copy.';return;}
+ try{if(!navigator.clipboard?.writeText)throw Error();await navigator.clipboard.writeText(text);exportStatus.textContent='Transcript copied.';}
+ catch{exportStatus.textContent='Could not copy. Select the transcript text and use your device copy command, or Download text.';transcriptField.focus();transcriptField.select();}
+});
+document.querySelector('#download-text').addEventListener('click',()=>{
+ const text=transcriptField.value;
+ if(!text.trim()){exportStatus.textContent='No transcript to download.';return;}
+ let url;
+ try{url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='puiso-transcript.txt';document.body.append(a);a.click();a.remove();exportStatus.textContent='Text download requested. Check your Downloads folder; the browser cannot confirm the file was saved.';}
+ catch{exportStatus.textContent='Could not start the text download. Try Copy transcript.';}
+ finally{if(url)setTimeout(()=>URL.revokeObjectURL(url),60000);}
+});
+window.addEventListener('beforeunload',event=>{
+ if(transcriptField.value.trim()||document.querySelector('#chat-input')?.value.trim()||document.querySelector('#messages')?.textContent.trim()||recordedAudio||busy){event.preventDefault();event.returnValue='';}
+});

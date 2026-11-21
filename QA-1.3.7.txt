@@ -1,0 +1,63 @@
+Puiso 1.3.7 release preparation — 21 November 2026
+
+RELEASE PREPARATION COMPLETE FOR VERSION METADATA AND LIMITED CODE QA ONLY.
+Awaiting the owner's explicit merge approval. Main and Pages source remain unchanged.
+This is not a claim that full functional or phone accessibility QA passed.
+
+Changes reviewed in the four original commits:
+6863101: Puiso page branding, coverage notice and transcript export controls.
+91188e8: transcript copy/download handlers, loss warning, append transcription,
+read-aloud language override and browser-language/voice fallback.
+01f1bee: installed-app branding and online-processing notice in the manifest.
+4dd44a6: original draft QA status, superseded by this accurately scoped record.
+
+Completed release updates on fixes-1.3.7 only:
+sw.js VERSION changed from v1.3.6 to v1.3.7, preserving waiting activation.
+app.js displayed app version changed from 1.3.6 to 1.3.7.
+manifest.webmanifest now includes version 1.3.7; identity/start URL/scope unchanged.
+No new language/provider pilot or backend change. No paid service enabled.
+
+Completed checks on 21 November 2026:
+app.js and sw.js parse successfully with JavaScript Function syntax checks.
+Manifest parses as JSON and reports version 1.3.7.
+Copy, download, export-status and transcript IDs each occur exactly once.
+Export status has role=status and aria-live=polite.
+Code review confirms transcript append rather than replacement; no new persistence.
+Code review confirms en-ZA/af-ZA selection, optional detector and voice fallback.
+Code review confirms beforeunload guard and no forced service-worker skipWaiting.
+Isolated actual export handlers executed against mocked browser APIs:
+empty copy/download statuses, successful copy argument, UTF-8 Blob round-trip
+with accented text, text/plain;charset=utf-8, copy failure focus/selection,
+download failure message, and unsaved-transcript preventDefault all passed.
+These are code-level tests, NOT real clipboard/download or device tests.
+
+Functional QA limitations and pending checks:
+No hosted branch preview was deployed. Full branch functional/regression QA
+has not been performed in this run. Mocked tests do not validate browser
+permissions, real downloads, service-worker rollout, or backend integration.
+Post-merge live version, page load, controls and console checks remain pending.
+Browser-capable follow-up: real copy/download and UTF-8 file, keyboard access,
+read-aloud locale/fallback and cancellation races, missing voices,
+photo processing/failures, chat, search, YouTube playback/errors, and unsaved
+warnings across flows. Browser support and network limitations must be reported.
+
+OWNER-PENDING ON PHONE:
+Real English/Afrikaans speech, silence, quiet speech, noise and recording failures.
+Noise discrimination is NOT fixed: existing loudness heuristic remains;
+it is not speech recognition.
+TalkBack announcements, navigation and keyboard/accessibility behaviour.
+Mobile unsaved-work warnings, installed voices and stop/cancel races.
+Owner reported phone testing without problems on 21 November 2026;
+specific cases above were not individually evidenced and remain owner-pending.
+
+Historical observations from 20 November (not new release test results):
+Neutral live chat answered Two plus two equals four.
+Recording reported no microphone; empty photo/invalid YouTube had clear errors.
+Photo processing and YouTube playback were not verified.
+Static narrow-screen preview had no measured horizontal overflow.
+
+Release control:
+Merge fixes-1.3.7 into main only after explicit native approval naming pending QA.
+Pages serves main at root. Never change the username spelling.
+If live breaks, revert the merge to restore the previous main head and verify.
+Only sa-voice-app is in scope. Other repositories and provider accounts untouched.

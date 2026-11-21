@@ -1,6 +1,7 @@
 {
-  "name": "SA Voice App",
-  "short_name": "SA Voice App",
+  "name": "Puiso",
+  "version": "1.3.7",
+  "short_name": "Puiso",
   "id": "./",
   "start_url": "./",
   "scope": "./",
@@ -8,7 +9,7 @@
   "background_color": "#030711",
   "theme_color": "#030711",
   "lang": "en",
-  "description": "Accessible on-device voice recording prototype.",
+  "description": "Accessible web prototype for voice recording, online transcription, AI chat and photo descriptions. Submitted content goes to Groq.",
   "icons": [
     {
       "src": "./icon.svg",
