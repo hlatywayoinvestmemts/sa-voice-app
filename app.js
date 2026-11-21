@@ -318,7 +318,7 @@ el('p','Suggested gateway: Paystack hosted card checkout, subject to merchant ve
 
 // Show the installed shell and a safe, non-disruptive update notice.
 const release = document.createElement('p'); release.setAttribute('role','status'); release.setAttribute('aria-live','polite');
-release.textContent = 'App version 1.3.6. Chat is connected when online. If an old screen says AI chat is not connected, close all Puiso app and browser tabs, then reopen while online.';
+release.textContent = 'App version 1.3.7. Chat is connected when online. If an old screen says AI chat is not connected, close all Puiso app and browser tabs, then reopen while online.';
 document.querySelector('footer').append(release);
 if ('serviceWorker' in navigator) navigator.serviceWorker.ready.then(reg => {
   const ready = () => { release.textContent = 'Update downloaded. Finish recording or editing, then close all Puiso app and browser tabs and reopen to update. Nothing is saved automatically.'; };
